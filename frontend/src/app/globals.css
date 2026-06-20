@@ -2037,3 +2037,42 @@ tbody tr:last-child td { border-bottom: none; }
   .stock-num-val { color: #D3D1C7; }
 }
 
+/* ───────────────────────────────────────────────────────── */
+/* BOM TREE STYLES                                           */
+/* ───────────────────────────────────────────────────────── */
+
+.bom-tree {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.bom-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.bom-tree-icon {
+  color: var(--text-muted);
+}
+
+.bom-tree-name {
+  flex: 1;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.bom-tree-qty {
+  font-weight: 700;
+  color: #D85A30;
+}
+
+.bom-tree-uom {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+

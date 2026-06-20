@@ -89,6 +89,13 @@ enum OrderSource {
   AUTO_PROCUREMENT
 }
 
+enum ProductCategory {
+  RAW_MATERIAL
+  COMPONENT
+  CONSUMABLE
+  FINISHED_GOOD
+}
+
 // ============================================================
 // IDENTITY & AUTH
 // ============================================================
@@ -192,7 +199,7 @@ model Product {
   id                  Int                  @id @default(autoincrement())
   sku                 String               @unique @db.VarChar(40)
   name                String               @db.VarChar(150)
-  category            String?              @db.VarChar(60)
+  category            ProductCategory?     // RAW_MATERIAL | COMPONENT | CONSUMABLE | FINISHED_GOOD
   uom                 String               @default("UNIT") @db.VarChar(20)
   salesPrice          Decimal              @default(0) @map("sales_price") @db.Decimal(14, 2)
   costPrice           Decimal              @default(0) @map("cost_price") @db.Decimal(14, 2)
@@ -204,6 +211,7 @@ model Product {
   onHandQty           Decimal              @default(0) @map("on_hand_qty") @db.Decimal(14, 3)
   reservedQty         Decimal              @default(0) @map("reserved_qty") @db.Decimal(14, 3)
   reorderPoint        Decimal              @default(0) @map("reorder_point") @db.Decimal(14, 3)
+  reorderQty          Decimal              @default(0) @map("reorder_qty") @db.Decimal(14, 3)
   status              UserStatus           @default(ACTIVE)
   createdAt           DateTime             @default(now()) @map("created_at")
   updatedAt           DateTime             @updatedAt @map("updated_at")

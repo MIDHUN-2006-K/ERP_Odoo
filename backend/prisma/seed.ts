@@ -139,6 +139,8 @@ async function main() {
     },
   });
 
+
+
   // ============================================================
   // CUSTOMERS
   // ============================================================
@@ -172,20 +174,24 @@ async function main() {
   // ============================================================
   // WORK CENTERS
   // ============================================================
+  const wcCutting = await prisma.workCenter.create({
+    data: { name: 'WC001 Cutting Station', location: 'Floor 1', capacityPerDay: 100 },
+  });
+
   const wcAssembly = await prisma.workCenter.create({
-    data: { name: 'Assembly Line', location: 'Workshop Floor A', capacityPerDay: 50 },
+    data: { name: 'WC002 Assembly Station', location: 'Floor 1', capacityPerDay: 80 },
   });
 
   const wcPaint = await prisma.workCenter.create({
-    data: { name: 'Paint Floor', location: 'Workshop Floor B', capacityPerDay: 30 },
+    data: { name: 'WC003 Painting Station', location: 'Floor 2', capacityPerDay: 50 },
+  });
+
+  const wcQuality = await prisma.workCenter.create({
+    data: { name: 'WC004 Quality Check', location: 'Floor 2', capacityPerDay: 120 },
   });
 
   const wcPackaging = await prisma.workCenter.create({
-    data: { name: 'Packaging Unit', location: 'Warehouse Section C', capacityPerDay: 100 },
-  });
-
-  const wcCutting = await prisma.workCenter.create({
-    data: { name: 'Cutting Station', location: 'Workshop Floor A', capacityPerDay: 40 },
+    data: { name: 'WC005 Packaging Station', location: 'Floor 3', capacityPerDay: 150 },
   });
 
   // ============================================================
@@ -195,7 +201,7 @@ async function main() {
     data: {
       sku: 'COMP-LEG-001',
       name: 'Table Leg (Wood)',
-      category: 'Component',
+      category: 'COMPONENT',
       uom: 'PCS',
       salesPrice: 0,
       costPrice: 150,
@@ -210,7 +216,7 @@ async function main() {
     data: {
       sku: 'COMP-TOP-001',
       name: 'Table Top (Plywood)',
-      category: 'Component',
+      category: 'COMPONENT',
       uom: 'PCS',
       salesPrice: 0,
       costPrice: 500,
@@ -225,7 +231,7 @@ async function main() {
     data: {
       sku: 'COMP-SCR-001',
       name: 'Wood Screws (Pack of 10)',
-      category: 'Component',
+      category: 'COMPONENT',
       uom: 'PACK',
       salesPrice: 0,
       costPrice: 25,
@@ -240,7 +246,7 @@ async function main() {
     data: {
       sku: 'COMP-PNT-001',
       name: 'Wood Polish (Mahogany)',
-      category: 'Component',
+      category: 'COMPONENT',
       uom: 'LITRE',
       salesPrice: 0,
       costPrice: 350,
@@ -255,7 +261,7 @@ async function main() {
     data: {
       sku: 'COMP-DFR-001',
       name: 'Door Frame (Teak)',
-      category: 'Component',
+      category: 'COMPONENT',
       uom: 'PCS',
       salesPrice: 0,
       costPrice: 800,
@@ -270,7 +276,7 @@ async function main() {
     data: {
       sku: 'COMP-LFR-001',
       name: 'Lighting Frame (Aluminium)',
-      category: 'Component',
+      category: 'COMPONENT',
       uom: 'PCS',
       salesPrice: 0,
       costPrice: 450,
@@ -288,7 +294,7 @@ async function main() {
     data: {
       sku: 'FG-TBL-001',
       name: 'Wooden Dining Table (6-seater)',
-      category: 'Finished Good',
+      category: 'FINISHED_GOOD',
       uom: 'UNIT',
       salesPrice: 15000,
       costPrice: 8500,
@@ -303,7 +309,7 @@ async function main() {
     data: {
       sku: 'FG-DSK-001',
       name: 'Office Desk (Executive)',
-      category: 'Finished Good',
+      category: 'FINISHED_GOOD',
       uom: 'UNIT',
       salesPrice: 12000,
       costPrice: 6800,
@@ -318,7 +324,7 @@ async function main() {
     data: {
       sku: 'FG-CHR-001',
       name: 'Wooden Chair (Cushioned)',
-      category: 'Finished Good',
+      category: 'FINISHED_GOOD',
       uom: 'UNIT',
       salesPrice: 4500,
       costPrice: 2200,
@@ -350,7 +356,8 @@ async function main() {
           { sequence: 1, operationName: 'Cutting', workCenterId: wcCutting.id, durationMinutes: 45 },
           { sequence: 2, operationName: 'Assembly', workCenterId: wcAssembly.id, durationMinutes: 60 },
           { sequence: 3, operationName: 'Painting', workCenterId: wcPaint.id, durationMinutes: 90 },
-          { sequence: 4, operationName: 'Packaging', workCenterId: wcPackaging.id, durationMinutes: 20 },
+          { sequence: 4, operationName: 'Quality Check', workCenterId: wcQuality.id, durationMinutes: 15 },
+          { sequence: 5, operationName: 'Packaging', workCenterId: wcPackaging.id, durationMinutes: 20 },
         ],
       },
     },
@@ -379,7 +386,8 @@ async function main() {
         create: [
           { sequence: 1, operationName: 'Assembly', workCenterId: wcAssembly.id, durationMinutes: 50 },
           { sequence: 2, operationName: 'Painting', workCenterId: wcPaint.id, durationMinutes: 60 },
-          { sequence: 3, operationName: 'Packaging', workCenterId: wcPackaging.id, durationMinutes: 15 },
+          { sequence: 3, operationName: 'Quality Check', workCenterId: wcQuality.id, durationMinutes: 10 },
+          { sequence: 4, operationName: 'Packaging', workCenterId: wcPackaging.id, durationMinutes: 15 },
         ],
       },
     },

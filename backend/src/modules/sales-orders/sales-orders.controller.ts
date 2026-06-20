@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, ParseIntPipe, BadRequestException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { SalesOrdersService } from './sales-orders.service';
@@ -24,25 +24,42 @@ export class SalesOrdersController {
   findOne(@Param('id', ParseIntPipe) id: number) { return this.service.findOne(id); }
 
   @Post()
-  @Roles(Role.ADMIN, Role.SALES_USER)
+  @Roles(Role.ADMIN, Role.SALES_USER, Role.BUSINESS_OWNER)
   create(@Body() dto: any, @CurrentUser('id') userId: number) {
     return this.service.create(dto, userId);
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN, Role.SALES_USER)
+  @Roles(Role.ADMIN, Role.SALES_USER, Role.BUSINESS_OWNER)
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: any) {
     return this.service.update(id, dto);
   }
 
+  /**
+   * Kanban drag-to-advance: simple status update (no stock reservation logic).
+   * Full transactional confirm/deliver remain on their own endpoints.
+   */
+  @Patch(':id/status')
+  @Roles(Role.ADMIN, Role.SALES_USER, Role.BUSINESS_OWNER)
+  @ApiOperation({ summary: 'Update order status (Kanban drag)' })
+  updateStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('status') status: string,
+    @CurrentUser('id') userId: number,
+  ) {
+    const allowed = ['DRAFT', 'CONFIRMED', 'PARTIALLY_DELIVERED', 'FULLY_DELIVERED', 'CANCELLED'];
+    if (!allowed.includes(status)) throw new BadRequestException(`Invalid status: ${status}`);
+    return this.service.updateStatus(id, status, userId);
+  }
+
   @Post(':id/confirm')
-  @Roles(Role.ADMIN, Role.SALES_USER)
+  @Roles(Role.ADMIN, Role.SALES_USER, Role.BUSINESS_OWNER)
   confirm(@Param('id', ParseIntPipe) id: number, @CurrentUser('id') userId: number) {
     return this.service.confirm(id, userId);
   }
 
   @Post(':id/deliver')
-  @Roles(Role.ADMIN, Role.SALES_USER, Role.INVENTORY_MANAGER)
+  @Roles(Role.ADMIN, Role.SALES_USER, Role.INVENTORY_MANAGER, Role.BUSINESS_OWNER)
   deliver(
     @Param('id', ParseIntPipe) id: number,
     @Body('lines') lines: { salesOrderLineId: number; quantity: number }[],
@@ -52,7 +69,7 @@ export class SalesOrdersController {
   }
 
   @Post(':id/cancel')
-  @Roles(Role.ADMIN, Role.SALES_USER)
+  @Roles(Role.ADMIN, Role.SALES_USER, Role.BUSINESS_OWNER)
   cancel(@Param('id', ParseIntPipe) id: number, @CurrentUser('id') userId: number) {
     return this.service.cancel(id, userId);
   }
@@ -61,3 +78,4 @@ export class SalesOrdersController {
   @Roles(Role.ADMIN)
   remove(@Param('id', ParseIntPipe) id: number) { return this.service.remove(id); }
 }
+

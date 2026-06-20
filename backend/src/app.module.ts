@@ -14,6 +14,7 @@ import { InventoryModule } from './modules/inventory/inventory.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { UsersModule } from './modules/users/users.module';
+import { WorkCentersModule } from './modules/work-centers/work-centers.module';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { SequenceService } from './common/services/sequence.service';
 
@@ -33,6 +34,7 @@ import { SequenceService } from './common/services/sequence.service';
     DashboardModule,
     AuditLogsModule,
     UsersModule,
+    WorkCentersModule,
   ],
   providers: [
     SequenceService,

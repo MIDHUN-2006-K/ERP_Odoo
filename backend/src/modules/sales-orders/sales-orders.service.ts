@@ -2,12 +2,14 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../prisma/prisma.service';
 import { SequenceService } from '../../common/services/sequence.service';
 import { Prisma } from '@prisma/client';
+import { ProcurementService } from './procurement.service';
 
 @Injectable()
 export class SalesOrdersService {
   constructor(
     private prisma: PrismaService,
     private sequenceService: SequenceService,
+    private procurementService: ProcurementService,
   ) {}
 
   async findAll(query?: { status?: string; search?: string }) {
@@ -139,8 +141,9 @@ export class SalesOrdersService {
               quantity: reqQty,
             },
           });
-        } else if (product.procureOnDemand && product.procurementType) {
-          // MTO — reserve what's available, auto-procure the rest
+        } else if (product.procureOnDemand && product.procurementType === 'MANUFACTURING') {
+          // MTO + MANUFACTURE: reserve what's available, auto-create MO + child POs for shortage
+          const shortage = reqQty - Math.max(freeQty, 0);
           if (freeQty > 0) {
             await tx.product.update({
               where: { id: product.id },
@@ -155,11 +158,46 @@ export class SalesOrdersService {
               },
             });
           }
-
-          // Auto procurement will be handled separately
+          // Trigger procurement automation
+          await this.procurementService.triggerManufacturingProcurement(
+            product.id, shortage, id, userId, tx,
+          );
+        } else if (product.procureOnDemand && product.procurementType === 'PURCHASE') {
+          // MTO + PURCHASE: reserve what's available, let purchase user handle the rest
+          const shortage = reqQty - Math.max(freeQty, 0);
+          if (freeQty > 0) {
+            await tx.product.update({
+              where: { id: product.id },
+              data: { reservedQty: { increment: freeQty } },
+            });
+            await tx.stockReservation.create({
+              data: {
+                productId: product.id,
+                referenceType: 'SALES_ORDER_LINE',
+                referenceId: line.id,
+                quantity: freeQty,
+              },
+            });
+          }
+          // Auto-create purchase order for shortage
+          if (product.defaultVendorId && shortage > 0) {
+            const poNo = await this.sequenceService.getNext('PO');
+            await tx.purchaseOrder.create({
+              data: {
+                orderNo: poNo,
+                vendorId: product.defaultVendorId,
+                status: 'DRAFT',
+                source: 'AUTO_PROCUREMENT',
+                sourceReferenceId: id,
+                createdBy: userId,
+                lines: { create: [{ productId: product.id, quantity: shortage, unitCost: 0 }] },
+              },
+            });
+          }
         } else {
           throw new BadRequestException(
-            `Insufficient stock for "${product.name}": available ${freeQty}, required ${reqQty}`
+            `Insufficient stock for "${product.name}": available ${freeQty}, required ${reqQty}. ` +
+            `Enable "Procure on Demand" on this product to auto-generate procurement orders.`
           );
         }
       }
@@ -347,9 +385,24 @@ export class SalesOrdersService {
     });
   }
 
+  /** Simple status update for Kanban drag — no stock reservation side-effects */
+  async updateStatus(id: number, status: string, userId: number) {
+    const so = await this.findOne(id);
+    if (so.status === status) return so; // no-op
+    await this.prisma.salesOrder.update({ where: { id }, data: { status: status as any } });
+    await this.prisma.auditLog.create({
+      data: {
+        entityType: 'SALES_ORDER', entityId: id, action: 'STATUS_UPDATE',
+        before: { status: so.status }, after: { status }, userId,
+      },
+    });
+    return this.findOne(id);
+  }
+
   async remove(id: number) {
     const so = await this.findOne(id);
     if (so.status !== 'DRAFT') throw new BadRequestException('Can only delete DRAFT orders');
     return this.prisma.salesOrder.delete({ where: { id } });
   }
 }
+

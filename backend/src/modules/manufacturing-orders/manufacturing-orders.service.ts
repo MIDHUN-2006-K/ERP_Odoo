@@ -221,9 +221,24 @@ export class ManufacturingOrdersService {
     });
   }
 
+  /** Simple status update for card advance button */
+  async updateStatus(id: number, status: string, userId: number) {
+    const mo = await this.findOne(id);
+    if (mo.status === status) return mo;
+    await this.prisma.manufacturingOrder.update({ where: { id }, data: { status: status as any } });
+    await this.prisma.auditLog.create({
+      data: {
+        entityType: 'MANUFACTURING_ORDER', entityId: id, action: 'STATUS_UPDATE',
+        before: { status: mo.status }, after: { status }, userId,
+      },
+    });
+    return this.findOne(id);
+  }
+
   async remove(id: number) {
     const mo = await this.findOne(id);
     if (mo.status !== 'DRAFT') throw new BadRequestException('Can only delete DRAFT orders');
     return this.prisma.manufacturingOrder.delete({ where: { id } });
   }
 }
+

@@ -1,6 +1,6 @@
 import { IsString, IsOptional, IsNumber, IsEnum, IsBoolean, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ProcurementStrategy, ProcurementType } from '@prisma/client';
+import { ProcurementStrategy, ProcurementType, ProductCategory } from '@prisma/client';
 
 export class CreateProductDto {
   @ApiProperty({ example: 'FG-TBL-002' })
@@ -13,10 +13,10 @@ export class CreateProductDto {
   @MaxLength(150)
   name: string;
 
-  @ApiPropertyOptional({ example: 'Finished Good' })
+  @ApiPropertyOptional({ enum: ProductCategory })
   @IsOptional()
-  @IsString()
-  category?: string;
+  @IsEnum(ProductCategory)
+  category?: ProductCategory;
 
   @ApiPropertyOptional({ example: 'UNIT' })
   @IsOptional()
@@ -62,6 +62,11 @@ export class CreateProductDto {
   @IsOptional()
   @IsNumber()
   reorderPoint?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  reorderQty?: number;
 }
 
 export class UpdateProductDto {
@@ -71,10 +76,10 @@ export class UpdateProductDto {
   @MaxLength(150)
   name?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ enum: ProductCategory })
   @IsOptional()
-  @IsString()
-  category?: string;
+  @IsEnum(ProductCategory)
+  category?: ProductCategory;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -120,6 +125,11 @@ export class UpdateProductDto {
   @IsOptional()
   @IsNumber()
   reorderPoint?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  reorderQty?: number;
 
   @ApiPropertyOptional()
   @IsOptional()

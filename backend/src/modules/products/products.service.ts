@@ -21,7 +21,7 @@ export class ProductsService {
     }
 
     if (query?.lowStock === 'true') {
-      where.onHandQty = { lte: { path: ['reorderPoint'] } };
+      // Prisma doesn't support cross-column comparison, so filter in-memory
     }
 
     const products = await this.prisma.product.findMany({
@@ -33,11 +33,18 @@ export class ProductsService {
       orderBy: { name: 'asc' },
     });
 
-    // Compute freeToUseQty for each product
-    return products.map(p => ({
+    // Compute freeToUseQty and lowStock flag
+    let result = products.map(p => ({
       ...p,
       freeToUseQty: Number(p.onHandQty) - Number(p.reservedQty),
+      isLowStock: Number(p.reorderPoint) > 0 && Number(p.onHandQty) <= Number(p.reorderPoint),
     }));
+
+    if (query?.lowStock === 'true') {
+      result = result.filter(p => p.isLowStock);
+    }
+
+    return result;
   }
 
   async findOne(id: number) {
@@ -46,15 +53,40 @@ export class ProductsService {
       include: {
         defaultVendor: { select: { id: true, name: true } },
         defaultBom: {
-          select: {
-            id: true, version: true, status: true,
+          include: {
             components: {
-              include: { componentProduct: { select: { id: true, name: true, sku: true, uom: true } } },
+              include: {
+                componentProduct: {
+                  select: {
+                    id: true, name: true, sku: true, uom: true, category: true,
+                    procurementType: true, onHandQty: true, reservedQty: true,
+                  },
+                },
+              },
+            },
+            operations: {
+              include: { workCenter: { select: { id: true, name: true } } },
+              orderBy: { sequence: 'asc' },
             },
           },
         },
         boms: {
-          select: { id: true, version: true, status: true },
+          include: {
+            components: {
+              include: {
+                componentProduct: {
+                  select: {
+                    id: true, name: true, sku: true, uom: true, category: true,
+                    procurementType: true, onHandQty: true, reservedQty: true,
+                  },
+                },
+              },
+            },
+            operations: {
+              include: { workCenter: { select: { id: true, name: true } } },
+              orderBy: { sequence: 'asc' },
+            },
+          },
           orderBy: { version: 'desc' },
         },
       },
@@ -62,9 +94,62 @@ export class ProductsService {
 
     if (!product) throw new NotFoundException('Product not found');
 
+    // Fetch linked open orders (last 10 each)
+    const [openMOs, openPOs, recentLedger] = await Promise.all([
+      this.prisma.manufacturingOrder.findMany({
+        where: { productId: id, status: { notIn: ['DONE', 'CANCELLED'] } },
+        select: { id: true, orderNo: true, status: true, quantity: true, createdAt: true },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      }),
+      this.prisma.purchaseOrderLine.findMany({
+        where: {
+          productId: id,
+          purchaseOrder: { status: { notIn: ['FULLY_RECEIVED', 'CANCELLED'] } },
+        },
+        select: {
+          id: true, quantity: true, receivedQty: true,
+          purchaseOrder: {
+            select: { id: true, orderNo: true, status: true, createdAt: true },
+          },
+        },
+        orderBy: { purchaseOrder: { createdAt: 'desc' } },
+        take: 10,
+      }),
+      this.prisma.stockLedger.findMany({
+        where: { productId: id },
+        select: {
+          id: true, movementType: true, quantity: true, balanceAfter: true,
+          referenceType: true, referenceId: true, createdAt: true,
+          createdByUser: { select: { name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      }),
+    ]);
+
+    // Deduplicate POs (multiple lines per PO)
+    const seenPOs = new Set<number>();
+    const linkedPOs = openPOs
+      .filter(line => {
+        if (seenPOs.has(line.purchaseOrder.id)) return false;
+        seenPOs.add(line.purchaseOrder.id);
+        return true;
+      })
+      .map(line => ({
+        id: line.purchaseOrder.id,
+        orderNo: line.purchaseOrder.orderNo,
+        status: line.purchaseOrder.status,
+        createdAt: line.purchaseOrder.createdAt,
+      }));
+
     return {
       ...product,
       freeToUseQty: Number(product.onHandQty) - Number(product.reservedQty),
+      isLowStock: Number(product.reorderPoint) > 0 && Number(product.onHandQty) <= Number(product.reorderPoint),
+      linkedMOs: openMOs,
+      linkedPOs,
+      recentLedger,
     };
   }
 
@@ -78,7 +163,7 @@ export class ProductsService {
       data: {
         sku: dto.sku,
         name: dto.name,
-        category: dto.category,
+        category: dto.category || null,
         uom: dto.uom || 'UNIT',
         salesPrice: dto.salesPrice || 0,
         costPrice: dto.costPrice || 0,
@@ -88,12 +173,13 @@ export class ProductsService {
         defaultVendorId: dto.defaultVendorId,
         defaultBomId: dto.defaultBomId,
         reorderPoint: dto.reorderPoint || 0,
+        reorderQty: dto.reorderQty || 0,
       },
     });
   }
 
   async update(id: number, dto: UpdateProductDto) {
-    await this.findOne(id); // Verify exists
+    await this.findOne(id);
     return this.prisma.product.update({
       where: { id },
       data: dto as any,

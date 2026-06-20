@@ -141,9 +141,24 @@ export class PurchaseOrdersService {
     return this.findOne(id);
   }
 
+  /** Simple status update for Kanban drag — no goods-receipt side-effects */
+  async updateStatus(id: number, status: string, userId: number) {
+    const po = await this.findOne(id);
+    if (po.status === status) return po;
+    await this.prisma.purchaseOrder.update({ where: { id }, data: { status: status as any } });
+    await this.prisma.auditLog.create({
+      data: {
+        entityType: 'PURCHASE_ORDER', entityId: id, action: 'STATUS_UPDATE',
+        before: { status: po.status }, after: { status }, userId,
+      },
+    });
+    return this.findOne(id);
+  }
+
   async remove(id: number) {
     const po = await this.findOne(id);
     if (po.status !== 'DRAFT') throw new BadRequestException('Can only delete DRAFT orders');
     return this.prisma.purchaseOrder.delete({ where: { id } });
   }
 }
+

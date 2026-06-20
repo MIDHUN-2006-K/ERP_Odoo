@@ -1,10 +1,11 @@
-import { Controller, Get, Patch, Body, Param, Query, UseGuards, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, ParseIntPipe, ConflictException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RbacGuard } from '../../common/guards/rbac.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -38,19 +39,56 @@ export class UsersController {
     });
   }
 
+  /** Admin creates a new user with a specific role and temporary password */
+  @Post()
+  async create(@Body() dto: { name: string; email: string; password: string; role?: Role; phone?: string }) {
+    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    if (existing) throw new ConflictException('Email already registered');
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(dto.password, salt);
+
+    return this.prisma.user.create({
+      data: {
+        name: dto.name,
+        email: dto.email,
+        passwordHash,
+        role: dto.role || Role.SALES_USER,
+        phone: dto.phone,
+      },
+      select: { id: true, name: true, email: true, role: true, status: true, phone: true, createdAt: true },
+    });
+  }
+
   @Patch(':id')
   async update(@Param('id', ParseIntPipe) id: number, @Body() dto: any) {
     const allowedFields: any = {};
-    if (dto.name) allowedFields.name = dto.name;
-    if (dto.role) allowedFields.role = dto.role;
+    if (dto.name)   allowedFields.name   = dto.name;
+    if (dto.role)   allowedFields.role   = dto.role;
     if (dto.status) allowedFields.status = dto.status;
-    if (dto.phone) allowedFields.phone = dto.phone;
-    if (dto.address) allowedFields.address = dto.address;
+    if (dto.phone)  allowedFields.phone  = dto.phone;
+    if (dto.address)allowedFields.address= dto.address;
+
+    // Allow password reset by admin
+    if (dto.password) {
+      const salt = await bcrypt.genSalt(10);
+      allowedFields.passwordHash = await bcrypt.hash(dto.password, salt);
+    }
 
     return this.prisma.user.update({
       where: { id },
       data: allowedFields,
       select: { id: true, name: true, email: true, role: true, status: true, phone: true, address: true },
+    });
+  }
+
+  /** Soft-delete: set status to DISABLED */
+  @Delete(':id')
+  async deactivate(@Param('id', ParseIntPipe) id: number) {
+    return this.prisma.user.update({
+      where: { id },
+      data: { status: 'DISABLED' },
+      select: { id: true, name: true, email: true, role: true, status: true },
     });
   }
 }
