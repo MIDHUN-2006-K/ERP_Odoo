@@ -10,16 +10,20 @@
    ============================================================ */
 :root {
   /* ── Neutral base (Light Mode) ── */
-  --bg-root:          #EAE8E1;
-  --bg-body:          #F1EFE8;
+  --bg-root:          #FFFAF7;
+  --bg-body:          #FAF4EE;
+  --bg-gradient:      linear-gradient(135deg, #FFFAF7 0%, #FAF4EE 100%);
   --bg-surface:       #FFFFFF;
-  --bg-surface-hover: #F7F6F2;
-  --bg-surface-active:#EDE9E2;
-  --bg-card:          #FAFAF8;
-  --bg-card-hover:    #F7F6F2;
+  --bg-surface-hover: #FAF8F5;
+  --bg-surface-active:#F2EDE6;
+  --bg-card:          #FFFFFF;
+  --bg-card-hover:    #FAF8F5;
   --bg-input:         #FFFFFF;
   --bg-input-focus:   #FFFBF8;
   --bg-overlay:       rgba(44, 44, 42, 0.55);
+
+  /* ── Card border (warm gray) ── */
+  --border-card:      #E8E3DD;
 
   /* ── Borders ── */
   --border-subtle:    rgba(95, 94, 90, 0.12);
@@ -138,6 +142,7 @@
   :root {
     --bg-root:          #1C1B18;
     --bg-body:          #2C2C2A;
+    --bg-gradient:      linear-gradient(135deg, #232220 0%, #2C2C2A 100%);
     --bg-surface:       #444441;
     --bg-surface-hover: #505050;
     --bg-surface-active:#585856;
@@ -146,6 +151,7 @@
     --bg-input:         #333331;
     --bg-input-focus:   #3A3A38;
     --bg-overlay:       rgba(0, 0, 0, 0.70);
+    --border-card:      rgba(211, 209, 199, 0.14);
 
     --border-subtle:  rgba(211, 209, 199, 0.10);
     --border-default: rgba(211, 209, 199, 0.20);
@@ -212,7 +218,7 @@ body {
   font-size: var(--text-base);
   line-height: 1.6;
   color: var(--text-primary);
-  background: var(--bg-body);
+  background: var(--bg-gradient);
   min-height: 100vh;
 }
 
@@ -256,7 +262,7 @@ button, input, select, textarea {
   padding-top: var(--topbar-height);
   transition: margin-left var(--transition-slow);
   min-height: 100vh;
-  background: var(--bg-body);
+  background: var(--bg-gradient);
 }
 
 .page-container {
@@ -635,8 +641,8 @@ button, input, select, textarea {
    CARDS
    ============================================================ */
 .card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
+  background: #FFFFFF;
+  border: 0.5px solid #E8E3DD;
   border-radius: var(--radius-lg);
   padding: var(--space-6);
   transition: all var(--transition-fast);
@@ -644,7 +650,7 @@ button, input, select, textarea {
 }
 
 .card:hover {
-  border-color: var(--border-default);
+  border-color: #D4CFC9;
   box-shadow: var(--shadow-md);
 }
 
@@ -839,10 +845,10 @@ tbody tr:last-child td { border-bottom: none; }
 }
 
 .stat-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
+  background: #FFFFFF;
+  border: 0.5px solid #E8E3DD;
   border-radius: var(--radius-lg);
-  padding: var(--space-5);
+  padding: 1.25rem;
   cursor: pointer;
   transition: all var(--transition-fast);
   position: relative;
@@ -858,29 +864,31 @@ tbody tr:last-child td { border-bottom: none; }
   left: 0;
   bottom: 0;
   width: 4px;
-  background: var(--border-default);
+  background: #E8E3DD;
   transition: background var(--transition-fast);
 }
 
 .stat-card:hover {
-  border-color: var(--border-default);
+  border-color: #D4CFC9;
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
 
 .stat-value {
-  font-size: var(--text-3xl);
+  font-size: 1.75rem;
   font-weight: 800;
-  color: var(--text-primary);
+  color: #2C2C2A;
   line-height: 1;
   padding-left: var(--space-1);
 }
 
 .stat-label {
-  font-size: var(--text-sm);
-  color: var(--text-muted);
+  font-size: 0.75rem;
+  color: #888780;
   margin-top: var(--space-2);
-  font-weight: 500;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   padding-left: var(--space-1);
 }
 
@@ -890,6 +898,10 @@ tbody tr:last-child td { border-bottom: none; }
   margin-top: var(--space-1);
   padding-left: var(--space-1);
 }
+
+.stat-trend.up   { color: var(--success); }
+.stat-trend.down { color: var(--error); }
+.stat-trend.neutral { color: var(--text-muted); }
 
 /* Color variants */
 .stat-card.accent  { border-left-color: var(--accent); }
@@ -902,6 +914,661 @@ tbody tr:last-child td { border-bottom: none; }
 .stat-card.error::before   { background: var(--error); }
 .stat-card.info    { border-left-color: var(--info); }
 .stat-card.info::before    { background: var(--info); }
+
+/* ============================================================
+   METRIC / KPI CARDS (Dashboard)
+   ============================================================ */
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: var(--space-6);
+}
+
+.metric-card {
+  background: #FFFFFF;
+  border: 0.5px solid #E8E3DD;
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: #D4CFC9;
+}
+
+.metric-card-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #888780;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.5rem;
+}
+
+.metric-card-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #2C2C2A;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.metric-card-trend {
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.metric-card-trend.trend-up   { color: var(--success); }
+.metric-card-trend.trend-down { color: var(--error); }
+.metric-card-trend.trend-neutral { color: var(--text-muted); }
+
+.metric-card-context {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* ============================================================
+   DASHBOARD CHART PANELS
+   ============================================================ */
+.dashboard-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.dashboard-grid-3 {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.chart-panel {
+  background: #FFFFFF;
+  border: 0.5px solid #E8E3DD;
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.chart-panel-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #2C2C2A;
+  margin-bottom: 0.25rem;
+}
+
+.chart-panel-subtitle {
+  font-size: 0.75rem;
+  color: #888780;
+  margin-bottom: 1rem;
+}
+
+/* ============================================================
+   FULFILLMENT GAUGE
+   ============================================================ */
+.gauge-wrap {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.gauge-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.gauge-legend-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8125rem;
+}
+
+.gauge-legend-label { color: #888780; font-weight: 500; }
+.gauge-legend-pct   { color: #2C2C2A; font-weight: 700; }
+
+/* ============================================================
+   MFG STATUS BARS (horizontal)
+   ============================================================ */
+.mfg-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.mfg-bar-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #2C2C2A;
+  width: 110px;
+  flex-shrink: 0;
+}
+
+.mfg-bar-count {
+  font-size: 0.75rem;
+  color: #888780;
+  width: 70px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.mfg-bar-track {
+  flex: 1;
+  height: 8px;
+  background: #F2EDE6;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.mfg-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================================
+   LOW STOCK ALERTS
+   ============================================================ */
+.low-stock-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.low-stock-alert {
+  border-radius: var(--radius-md);
+  padding: 0.75rem 0.875rem;
+  border-left: 3px solid transparent;
+  transition: all var(--transition-fast);
+}
+
+.low-stock-alert.critical {
+  background: #FCEBEB;
+  border-left-color: #E24B4A;
+}
+
+.low-stock-alert.low {
+  background: #FAEEDA;
+  border-left-color: #BA7517;
+}
+
+.low-stock-alert-name {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #2C2C2A;
+  margin-bottom: 2px;
+}
+
+.low-stock-alert-detail {
+  font-size: 0.6875rem;
+  color: #888780;
+}
+
+.low-stock-alert.critical .low-stock-alert-detail { color: #791F1F; }
+.low-stock-alert.low .low-stock-alert-detail { color: #633806; }
+
+/* ============================================================
+   KANBAN BOARD
+   ============================================================ */
+.kanban-board {
+  display: grid;
+  gap: 14px;
+  align-items: start;
+  margin-bottom: var(--space-6);
+}
+
+.kanban-board-4 { grid-template-columns: repeat(4, 1fr); }
+.kanban-board-3 { grid-template-columns: repeat(3, 1fr); }
+
+.kanban-column {
+  background: #FAFAF8;
+  border: 0.5px solid #E8E3DD;
+  border-radius: var(--radius-lg);
+  padding: 0.75rem;
+  min-height: 200px;
+  transition: background var(--transition-fast);
+}
+
+.kanban-column.drag-over {
+  background: rgba(216, 90, 48, 0.05);
+  border-color: var(--accent);
+}
+
+.kanban-col-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.625rem;
+  border-bottom: 1px solid #E8E3DD;
+}
+
+.kanban-col-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #2C2C2A;
+}
+
+.kanban-col-count {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #888780;
+  background: #F2EDE6;
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+}
+
+.kanban-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 60px;
+}
+
+.kanban-card {
+  background: #FFFFFF;
+  border: 0.5px solid #E8E3DD;
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  cursor: grab;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.kanban-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: #D4CFC9;
+  transform: translateY(-1px);
+}
+
+.kanban-card:active { cursor: grabbing; }
+
+.kanban-card.dragging {
+  opacity: 0.5;
+  box-shadow: var(--shadow-lg);
+}
+
+.kanban-card-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #2C2C2A;
+  margin-bottom: 3px;
+}
+
+.kanban-card-sub {
+  font-size: 0.75rem;
+  color: #888780;
+  margin-bottom: 4px;
+}
+
+.kanban-card-meta {
+  font-size: 0.6875rem;
+  color: #B4B2A9;
+}
+
+.kanban-inline-badge {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  background: #FCEBEB;
+  color: #791F1F;
+  padding: 1px 7px;
+  border-radius: var(--radius-md);
+  margin-top: 4px;
+}
+
+.kanban-inline-badge.delayed {
+  background: #FCEBEB;
+  color: #791F1F;
+}
+
+/* ============================================================
+   MANUFACTURING ORDER CARDS + TIMELINE
+   ============================================================ */
+.mo-card {
+  background: #FFFFFF;
+  border: 0.5px solid #E8E3DD;
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+}
+
+.mo-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: #D4CFC9;
+}
+
+.mo-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.mo-card-id {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent-text);
+  margin-bottom: 2px;
+}
+
+.mo-card-product {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #2C2C2A;
+}
+
+.mo-card-stage {
+  font-size: 0.75rem;
+  color: #888780;
+  margin-top: 2px;
+}
+
+.wo-timeline-new {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-top: 0.75rem;
+  position: relative;
+}
+
+.wo-step-new {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+}
+
+.wo-step-new:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: #E8E3DD;
+  z-index: 0;
+}
+
+.wo-step-new.done::after   { background: var(--success); }
+.wo-step-new.active::after { background: linear-gradient(90deg, var(--accent), #E8E3DD); }
+
+.wo-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #E8E3DD;
+  background: #FFFFFF;
+  z-index: 1;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+}
+
+.wo-dot.done   { background: var(--success); border-color: var(--success); color: white; }
+.wo-dot.active { background: var(--accent);  border-color: var(--accent);  color: white; }
+.wo-dot.pending{ background: #FFFFFF; border-color: #D4CFC9; }
+
+.wo-step-label {
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: #888780;
+  margin-top: 4px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.wo-step-new.done .wo-step-label   { color: var(--success); }
+.wo-step-new.active .wo-step-label { color: var(--accent); }
+
+.wo-step-dur {
+  font-size: 0.625rem;
+  color: #B4B2A9;
+  text-align: center;
+}
+
+/* ============================================================
+   STOCK CARD (Inventory)
+   ============================================================ */
+.stock-card {
+  background: #FFFFFF;
+  border: 0.5px solid #E8E3DD;
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  margin-bottom: 0.75rem;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+}
+
+.stock-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: #D4CFC9;
+}
+
+.stock-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.stock-card-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #2C2C2A;
+}
+
+.stock-card-meta {
+  font-size: 0.75rem;
+  color: #888780;
+  margin-top: 2px;
+}
+
+.stock-card-numbers {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.stock-num-item { text-align: center; }
+.stock-num-val  { font-size: 1.25rem; font-weight: 700; color: #2C2C2A; }
+.stock-num-lbl  { font-size: 0.6875rem; color: #888780; text-transform: uppercase; letter-spacing: 0.04em; }
+
+.stock-seg-bar {
+  display: flex;
+  height: 8px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  background: #F2EDE6;
+  margin-bottom: 0.375rem;
+}
+
+.stock-seg-free     { background: var(--success); }
+.stock-seg-reserved { background: var(--warning); }
+
+.stock-bar-labels {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.6875rem;
+  color: #888780;
+}
+
+.stock-bar-lbl-dot {
+  width: 7px; height: 7px;
+  border-radius: 2px;
+  display: inline-block;
+  margin-right: 3px;
+  vertical-align: middle;
+}
+
+/* ============================================================
+   ACTIVITY FEED (Audit Logs)
+   ============================================================ */
+.activity-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.activity-filter-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #888780;
+}
+
+.activity-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.activity-card {
+  background: #FFFFFF;
+  border: 0.5px solid #E8E3DD;
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  transition: all var(--transition-fast);
+}
+
+.activity-card:hover {
+  border-color: #D4CFC9;
+  box-shadow: var(--shadow-sm);
+}
+
+.activity-time {
+  font-size: 0.6875rem;
+  color: #888780;
+  margin-bottom: 3px;
+}
+
+.activity-action {
+  font-size: 0.875rem;
+  color: #2C2C2A;
+  margin-bottom: 2px;
+  line-height: 1.4;
+}
+
+.activity-action strong { font-weight: 600; }
+
+.activity-context {
+  font-size: 0.75rem;
+  color: #888780;
+}
+
+.activity-card.severity-warning .activity-action { color: #BA7517; }
+.activity-card.severity-critical .activity-action { color: #E24B4A; }
+
+.activity-pagination {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+/* ============================================================
+   VENDOR PERFORMANCE LEGEND
+   ============================================================ */
+.perf-legend {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.75rem;
+}
+
+.perf-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #888780;
+  font-weight: 600;
+}
+
+.perf-legend-dot {
+  width: 10px; height: 10px;
+  border-radius: 3px;
+}
+
+/* ============================================================
+   INVENTORY LEDGER TIMELINE
+   ============================================================ */
+.ledger-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.ledger-entry {
+  display: flex;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #F2EDE6;
+  align-items: flex-start;
+}
+
+.ledger-entry:last-child { border-bottom: none; }
+
+.ledger-qty {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  width: 52px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.ledger-qty.positive { color: var(--success); }
+.ledger-qty.negative { color: var(--error); }
+
+.ledger-body { flex: 1; }
+
+.ledger-desc {
+  font-size: 0.8125rem;
+  color: #2C2C2A;
+  font-weight: 500;
+}
+
+.ledger-meta {
+  font-size: 0.6875rem;
+  color: #888780;
+  margin-top: 2px;
+}
+
+.ledger-time {
+  font-size: 0.6875rem;
+  color: #B4B2A9;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   TREND INDICATOR
+   ============================================================ */
+.trend-up   { color: var(--success); }
+.trend-down { color: var(--error); }
+.trend-neutral { color: var(--text-muted); }
 
 /* ============================================================
    FILTER PILLS
@@ -1279,8 +1946,18 @@ tbody tr:last-child td { border-bottom: none; }
 }
 
 /* ============================================================
-   RESPONSIVE
+   RESPONSIVE — NEW COMPONENTS
    ============================================================ */
+@media (max-width: 1200px) {
+  .kanban-board-4  { grid-template-columns: repeat(2, 1fr); }
+  .metric-grid     { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 900px) {
+  .dashboard-grid-2 { grid-template-columns: 1fr; }
+  .dashboard-grid-3 { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 768px) {
   .sidebar { transform: translateX(-100%); }
   .main-content { margin-left: 0; }
@@ -1289,9 +1966,74 @@ tbody tr:last-child td { border-bottom: none; }
   .form-row { grid-template-columns: 1fr; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
   .table-search { width: 180px; }
+  .kanban-board-4  { grid-template-columns: 1fr 1fr; }
+  .kanban-board-3  { grid-template-columns: 1fr 1fr; }
+  .metric-grid     { grid-template-columns: 1fr 1fr; }
+  .activity-filters { gap: 0.5rem; }
 }
 
 @media (max-width: 480px) {
-  .stats-grid { grid-template-columns: 1fr; }
-  .page-title { font-size: var(--text-xl); }
+  .stats-grid      { grid-template-columns: 1fr; }
+  .page-title      { font-size: var(--text-xl); }
+  .kanban-board-4  { grid-template-columns: 1fr; }
+  .kanban-board-3  { grid-template-columns: 1fr; }
+  .metric-grid     { grid-template-columns: 1fr; }
+  .dashboard-grid-2{ grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   DARK MODE — NEW COMPONENT OVERRIDES
+   ============================================================ */
+@media (prefers-color-scheme: dark) {
+  .metric-card,
+  .chart-panel,
+  .kanban-card,
+  .mo-card,
+  .stock-card,
+  .activity-card {
+    background: #3A3A38;
+    border-color: rgba(211, 209, 199, 0.12);
+    color: #D3D1C7;
+  }
+
+  .kanban-column {
+    background: #333331;
+    border-color: rgba(211, 209, 199, 0.10);
+  }
+
+  .kanban-col-header  { border-bottom-color: rgba(211, 209, 199, 0.12); }
+  .kanban-col-count   { background: #444441; color: #B4B2A9; }
+
+  .metric-card-label,
+  .chart-panel-subtitle { color: #888780; }
+
+  .metric-card-value,
+  .chart-panel-title,
+  .kanban-card-title,
+  .mo-card-product,
+  .stock-card-name,
+  .activity-action  { color: #D3D1C7; }
+
+  .kanban-card-sub,
+  .kanban-card-meta,
+  .mo-card-stage,
+  .stock-card-meta,
+  .activity-context,
+  .activity-time    { color: #888780; }
+
+  .wo-dot { background: #3A3A38; border-color: #555553; }
+
+  .low-stock-alert.critical { background: rgba(226, 75, 74, 0.15); }
+  .low-stock-alert.low      { background: rgba(186, 117, 23, 0.15); }
+
+  .low-stock-alert-name     { color: #D3D1C7; }
+
+  .mfg-bar-track { background: #444441; }
+
+  .ledger-entry  { border-bottom-color: rgba(211, 209, 199, 0.08); }
+  .ledger-desc   { color: #D3D1C7; }
+
+  .stock-seg-bar { background: #444441; }
+  .stock-num-val { color: #D3D1C7; }
+}
+
