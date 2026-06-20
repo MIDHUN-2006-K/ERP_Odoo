@@ -1,0 +1,530 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum Role {
+  ADMIN
+  SALES_USER
+  PURCHASE_USER
+  MFG_USER
+  INVENTORY_MANAGER
+  BUSINESS_OWNER
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum ProcurementStrategy {
+  MTS
+  MTO
+}
+
+enum ProcurementType {
+  PURCHASE
+  MANUFACTURING
+}
+
+enum SalesOrderStatus {
+  DRAFT
+  CONFIRMED
+  PARTIALLY_DELIVERED
+  FULLY_DELIVERED
+  CANCELLED
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  CONFIRMED
+  PARTIALLY_RECEIVED
+  FULLY_RECEIVED
+  CANCELLED
+}
+
+enum ManufacturingOrderStatus {
+  DRAFT
+  CONFIRMED
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum WorkOrderStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+}
+
+enum BomStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum MovementType {
+  SALE_DELIVERY
+  PURCHASE_RECEIPT
+  MO_CONSUMPTION
+  MO_PRODUCTION
+  ADJUSTMENT
+}
+
+enum ReservationStatus {
+  ACTIVE
+  RELEASED
+  CONSUMED
+}
+
+enum OrderSource {
+  MANUAL
+  AUTO_PROCUREMENT
+}
+
+// ============================================================
+// IDENTITY & AUTH
+// ============================================================
+
+model User {
+  id           Int        @id @default(autoincrement())
+  name         String     @db.VarChar(120)
+  email        String     @unique @db.VarChar(150)
+  passwordHash String     @map("password_hash") @db.VarChar(255)
+  role         Role       @default(SALES_USER)
+  status       UserStatus @default(ACTIVE)
+  phone        String?    @db.VarChar(30)
+  address      String?
+  lastLoginAt  DateTime?  @map("last_login_at")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  refreshTokens    RefreshToken[]
+  salesOrders      SalesOrder[]
+  purchaseOrders   PurchaseOrder[]
+  manufacturingOrders ManufacturingOrder[]
+  stockLedgerEntries  StockLedger[]
+  auditLogs        AuditLog[]
+  bomsCreated      Bom[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  tokenHash String    @map("token_hash") @db.VarChar(255)
+  userAgent String?   @map("user_agent") @db.VarChar(255)
+  ipAddress String?   @map("ip_address") @db.VarChar(45)
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("refresh_tokens")
+}
+
+// ============================================================
+// PARTNERS
+// ============================================================
+
+model Customer {
+  id        Int       @id @default(autoincrement())
+  name      String    @db.VarChar(150)
+  email     String?   @db.VarChar(150)
+  phone     String?   @db.VarChar(30)
+  address   String?
+  status    UserStatus @default(ACTIVE)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  salesOrders SalesOrder[]
+
+  @@map("customers")
+}
+
+model Vendor {
+  id           Int        @id @default(autoincrement())
+  name         String     @db.VarChar(150)
+  email        String?    @db.VarChar(150)
+  phone        String?    @db.VarChar(30)
+  address      String?
+  gstNo        String?    @map("gst_no") @db.VarChar(20)
+  paymentTerms String?    @map("payment_terms") @db.VarChar(60)
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  products       Product[]
+  purchaseOrders PurchaseOrder[]
+
+  @@map("vendors")
+}
+
+// ============================================================
+// CATALOG / PRODUCTS
+// ============================================================
+
+model WorkCenter {
+  id              Int    @id @default(autoincrement())
+  name            String @db.VarChar(100)
+  location        String? @db.VarChar(150)
+  capacityPerDay  Int    @default(0) @map("capacity_per_day")
+  status          UserStatus @default(ACTIVE)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  bomOperations BomOperation[]
+  workOrders    WorkOrder[]
+
+  @@map("work_centers")
+}
+
+model Product {
+  id                  Int                  @id @default(autoincrement())
+  sku                 String               @unique @db.VarChar(40)
+  name                String               @db.VarChar(150)
+  category            String?              @db.VarChar(60)
+  uom                 String               @default("UNIT") @db.VarChar(20)
+  salesPrice          Decimal              @default(0) @map("sales_price") @db.Decimal(14, 2)
+  costPrice           Decimal              @default(0) @map("cost_price") @db.Decimal(14, 2)
+  procurementStrategy ProcurementStrategy  @default(MTS) @map("procurement_strategy")
+  procureOnDemand     Boolean              @default(false) @map("procure_on_demand")
+  procurementType     ProcurementType?     @map("procurement_type")
+  defaultVendorId     Int?                 @map("default_vendor_id")
+  defaultBomId        Int?                 @map("default_bom_id")
+  onHandQty           Decimal              @default(0) @map("on_hand_qty") @db.Decimal(14, 3)
+  reservedQty         Decimal              @default(0) @map("reserved_qty") @db.Decimal(14, 3)
+  reorderPoint        Decimal              @default(0) @map("reorder_point") @db.Decimal(14, 3)
+  status              UserStatus           @default(ACTIVE)
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+
+  // Relations
+  defaultVendor    Vendor?          @relation(fields: [defaultVendorId], references: [id])
+  defaultBom       Bom?             @relation("DefaultBom", fields: [defaultBomId], references: [id])
+  boms             Bom[]            @relation("ProductBoms")
+  bomComponents    BomComponent[]
+  salesOrderLines  SalesOrderLine[]
+  purchaseOrderLines PurchaseOrderLine[]
+  moComponents     MoComponent[]
+  manufacturingOrders ManufacturingOrder[]
+  stockLedger      StockLedger[]
+  stockReservations StockReservation[]
+
+  @@map("products")
+}
+
+// ============================================================
+// BILL OF MATERIALS
+// ============================================================
+
+model Bom {
+  id        Int       @id @default(autoincrement())
+  productId Int       @map("product_id")
+  version   Int       @default(1)
+  status    BomStatus @default(DRAFT)
+  createdBy Int       @map("created_by")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  product    Product        @relation("ProductBoms", fields: [productId], references: [id])
+  creator    User           @relation(fields: [createdBy], references: [id])
+  components BomComponent[]
+  operations BomOperation[]
+  defaultFor Product[]      @relation("DefaultBom")
+  manufacturingOrders ManufacturingOrder[]
+
+  @@unique([productId, version])
+  @@map("boms")
+}
+
+model BomComponent {
+  id                 Int     @id @default(autoincrement())
+  bomId              Int     @map("bom_id")
+  componentProductId Int     @map("component_product_id")
+  quantityPerUnit    Decimal @map("quantity_per_unit") @db.Decimal(14, 3)
+
+  bom              Bom     @relation(fields: [bomId], references: [id], onDelete: Cascade)
+  componentProduct Product @relation(fields: [componentProductId], references: [id])
+
+  @@map("bom_components")
+}
+
+model BomOperation {
+  id              Int    @id @default(autoincrement())
+  bomId           Int    @map("bom_id")
+  sequence        Int
+  operationName   String @map("operation_name") @db.VarChar(80)
+  workCenterId    Int    @map("work_center_id")
+  durationMinutes Int    @map("duration_minutes")
+
+  bom        Bom        @relation(fields: [bomId], references: [id], onDelete: Cascade)
+  workCenter WorkCenter @relation(fields: [workCenterId], references: [id])
+
+  @@map("bom_operations")
+}
+
+// ============================================================
+// SALES
+// ============================================================
+
+model SalesOrder {
+  id                   Int              @id @default(autoincrement())
+  orderNo              String           @unique @map("order_no") @db.VarChar(30)
+  customerId           Int              @map("customer_id")
+  status               SalesOrderStatus @default(DRAFT)
+  expectedDeliveryDate DateTime?        @map("expected_delivery_date")
+  createdBy            Int              @map("created_by")
+  createdAt            DateTime         @default(now()) @map("created_at")
+  updatedAt            DateTime         @updatedAt @map("updated_at")
+
+  customer   Customer         @relation(fields: [customerId], references: [id])
+  createdByUser User          @relation(fields: [createdBy], references: [id])
+  lines      SalesOrderLine[]
+  deliveries Delivery[]
+
+  @@map("sales_orders")
+}
+
+model SalesOrderLine {
+  id           Int     @id @default(autoincrement())
+  salesOrderId Int     @map("sales_order_id")
+  productId    Int     @map("product_id")
+  quantity     Decimal @db.Decimal(14, 3)
+  deliveredQty Decimal @default(0) @map("delivered_qty") @db.Decimal(14, 3)
+  unitPrice    Decimal @map("unit_price") @db.Decimal(14, 2)
+
+  salesOrder    SalesOrder     @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  product       Product        @relation(fields: [productId], references: [id])
+  deliveryLines DeliveryLine[]
+
+  @@map("sales_order_lines")
+}
+
+model Delivery {
+  id           Int      @id @default(autoincrement())
+  deliveryNo   String   @unique @map("delivery_no") @db.VarChar(30)
+  salesOrderId Int      @map("sales_order_id")
+  createdBy    Int      @map("created_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  salesOrder SalesOrder     @relation(fields: [salesOrderId], references: [id])
+  lines      DeliveryLine[]
+
+  @@map("deliveries")
+}
+
+model DeliveryLine {
+  id               Int     @id @default(autoincrement())
+  deliveryId       Int     @map("delivery_id")
+  salesOrderLineId Int     @map("sales_order_line_id")
+  quantity         Decimal @db.Decimal(14, 3)
+
+  delivery       Delivery       @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  salesOrderLine SalesOrderLine @relation(fields: [salesOrderLineId], references: [id])
+
+  @@map("delivery_lines")
+}
+
+// ============================================================
+// PURCHASE
+// ============================================================
+
+model PurchaseOrder {
+  id                Int                 @id @default(autoincrement())
+  orderNo           String              @unique @map("order_no") @db.VarChar(30)
+  vendorId          Int                 @map("vendor_id")
+  status            PurchaseOrderStatus @default(DRAFT)
+  source            OrderSource         @default(MANUAL)
+  sourceReferenceId Int?                @map("source_reference_id")
+  createdBy         Int                 @map("created_by")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+
+  vendor        Vendor              @relation(fields: [vendorId], references: [id])
+  createdByUser User                @relation(fields: [createdBy], references: [id])
+  lines         PurchaseOrderLine[]
+  goodsReceipts GoodsReceipt[]
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderLine {
+  id              Int     @id @default(autoincrement())
+  purchaseOrderId Int     @map("purchase_order_id")
+  productId       Int     @map("product_id")
+  quantity        Decimal @db.Decimal(14, 3)
+  receivedQty     Decimal @default(0) @map("received_qty") @db.Decimal(14, 3)
+  unitCost        Decimal @map("unit_cost") @db.Decimal(14, 2)
+
+  purchaseOrder     PurchaseOrder      @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product           Product            @relation(fields: [productId], references: [id])
+  goodsReceiptLines GoodsReceiptLine[]
+
+  @@map("purchase_order_lines")
+}
+
+model GoodsReceipt {
+  id              Int      @id @default(autoincrement())
+  receiptNo       String   @unique @map("receipt_no") @db.VarChar(30)
+  purchaseOrderId Int      @map("purchase_order_id")
+  createdBy       Int      @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  purchaseOrder PurchaseOrder    @relation(fields: [purchaseOrderId], references: [id])
+  lines         GoodsReceiptLine[]
+
+  @@map("goods_receipts")
+}
+
+model GoodsReceiptLine {
+  id                  Int     @id @default(autoincrement())
+  goodsReceiptId      Int     @map("goods_receipt_id")
+  purchaseOrderLineId Int     @map("purchase_order_line_id")
+  quantity            Decimal @db.Decimal(14, 3)
+
+  goodsReceipt      GoodsReceipt      @relation(fields: [goodsReceiptId], references: [id], onDelete: Cascade)
+  purchaseOrderLine PurchaseOrderLine  @relation(fields: [purchaseOrderLineId], references: [id])
+
+  @@map("goods_receipt_lines")
+}
+
+// ============================================================
+// MANUFACTURING
+// ============================================================
+
+model ManufacturingOrder {
+  id                Int                      @id @default(autoincrement())
+  orderNo           String                   @unique @map("order_no") @db.VarChar(30)
+  productId         Int                      @map("product_id")
+  bomId             Int                      @map("bom_id")
+  quantity          Decimal                  @db.Decimal(14, 3)
+  status            ManufacturingOrderStatus @default(DRAFT)
+  scheduledDate     DateTime?                @map("scheduled_date")
+  assigneeId        Int?                     @map("assignee_id")
+  source            OrderSource              @default(MANUAL)
+  sourceReferenceId Int?                     @map("source_reference_id")
+  createdBy         Int                      @map("created_by")
+  createdAt         DateTime                 @default(now()) @map("created_at")
+  updatedAt         DateTime                 @updatedAt @map("updated_at")
+
+  product       Product       @relation(fields: [productId], references: [id])
+  bom           Bom           @relation(fields: [bomId], references: [id])
+  createdByUser User          @relation(fields: [createdBy], references: [id])
+  components    MoComponent[]
+  workOrders    WorkOrder[]
+
+  @@map("manufacturing_orders")
+}
+
+model MoComponent {
+  id          Int     @id @default(autoincrement())
+  moId        Int     @map("mo_id")
+  productId   Int     @map("product_id")
+  requiredQty Decimal @map("required_qty") @db.Decimal(14, 3)
+  consumedQty Decimal @default(0) @map("consumed_qty") @db.Decimal(14, 3)
+
+  manufacturingOrder ManufacturingOrder @relation(fields: [moId], references: [id], onDelete: Cascade)
+  product            Product            @relation(fields: [productId], references: [id])
+
+  @@map("mo_components")
+}
+
+model WorkOrder {
+  id              Int             @id @default(autoincrement())
+  moId            Int             @map("mo_id")
+  sequence        Int
+  operationName   String          @map("operation_name") @db.VarChar(80)
+  workCenterId    Int             @map("work_center_id")
+  durationMinutes Int             @map("duration_minutes")
+  status          WorkOrderStatus @default(PENDING)
+  startedAt       DateTime?       @map("started_at")
+  completedAt     DateTime?       @map("completed_at")
+
+  manufacturingOrder ManufacturingOrder @relation(fields: [moId], references: [id], onDelete: Cascade)
+  workCenter         WorkCenter         @relation(fields: [workCenterId], references: [id])
+
+  @@map("work_orders")
+}
+
+// ============================================================
+// INVENTORY (THE HUB)
+// ============================================================
+
+model StockLedger {
+  id            Int          @id @default(autoincrement())
+  productId     Int          @map("product_id")
+  movementType  MovementType @map("movement_type")
+  quantity      Decimal      @db.Decimal(14, 3) // signed: negative = outflow
+  balanceAfter  Decimal      @map("balance_after") @db.Decimal(14, 3)
+  referenceType String       @map("reference_type") @db.VarChar(30)
+  referenceId   Int          @map("reference_id")
+  createdBy     Int          @map("created_by")
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  product   Product @relation(fields: [productId], references: [id])
+  createdByUser User @relation(fields: [createdBy], references: [id])
+
+  @@index([productId, createdAt(sort: Desc)])
+  @@index([referenceType, referenceId])
+  @@map("stock_ledger")
+}
+
+model StockReservation {
+  id            Int               @id @default(autoincrement())
+  productId     Int               @map("product_id")
+  referenceType String            @map("reference_type") @db.VarChar(30)
+  referenceId   Int               @map("reference_id")
+  quantity      Decimal           @db.Decimal(14, 3)
+  status        ReservationStatus @default(ACTIVE)
+  createdAt     DateTime          @default(now()) @map("created_at")
+  releasedAt    DateTime?         @map("released_at")
+
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+  @@map("stock_reservations")
+}
+
+// ============================================================
+// AUDIT LOG (IMMUTABLE)
+// ============================================================
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  entityType String   @map("entity_type") @db.VarChar(40)
+  entityId   Int      @map("entity_id")
+  action     String   @db.VarChar(30)
+  before     Json?
+  after      Json?
+  userId     Int      @map("user_id")
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+  @@map("audit_logs")
+}
+
+// ============================================================
+// SEQUENCES (for document numbering)
+// ============================================================
+
+model Sequence {
+  id     Int    @id @default(autoincrement())
+  prefix String @unique @db.VarChar(10)
+  nextVal Int   @default(1) @map("next_val")
+
+  @@map("sequences")
+}
